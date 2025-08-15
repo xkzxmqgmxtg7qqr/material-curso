@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Experiencia Docente Interactiva | Matemática y Estadística</title>
+  <!-- Estilos mínimos, accesibles y limpios -->
+  <style>
+    :root {
+      --brand: #0b6cbe;   /* color primario */
+      --accent: #159957;  /* color secundario */
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --text: #1a1a1a;
+      --muted: #555;
+      --danger: #a61b1b;
+    }
+    html, body { margin: 0; padding: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color: var(--text); background: var(--bg); }
+    header { background: linear-gradient(135deg, var(--brand), var(--accent)); color: white; padding: 2rem 1.25rem; }
+    header .title { max-width: 1100px; margin: 0 auto; }
+    header h1 { margin: 0 0 0.25rem; font-weight: 800; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: 0.2px; }
+    header p { margin: 0; opacity: 0.95; }
+
+    main { max-width: 1100px; margin: -1.25rem auto 4rem; padding: 0 1.25rem; }
+    .card { background: var(--card); border-radius: 16px; padding: 1.25rem; box-shadow: 0 6px 18px rgba(10, 31, 68, 0.08); margin: 1rem 0; }
+    .grid { display: grid; gap: 1rem; }
+    .grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.85rem; background: #e6f2fb; color: var(--brand); font-weight: 600; }
+    .muted { color: var(--muted); }
+    .controls { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; }
+    label { font-size: 0.9rem; color: var(--muted); display: block; margin-bottom: 0.25rem; }
+    input[type="number"], input[type="text"], select { padding: 0.5rem 0.6rem; border: 1px solid #ddd; border-radius: 10px; min-width: 90px; font-size: 0.95rem; }
+    button { padding: 0.6rem 0.9rem; border: none; border-radius: 12px; background: var(--brand); color: #fff; font-weight: 700; cursor: pointer; }
+    button.secondary { background: var(--accent); }
+    button.ghost { background: #eef6ff; color: var(--brand); }
+    button.danger { background: var(--danger); }
+    details { border: 1px dashed #d8e7f7; border-radius: 12px; padding: 0.6rem 0.8rem; }
+    details summary { cursor: pointer; font-weight: 700; color: var(--brand); }
+    .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+    .row > * { flex: 1 1 260px; }
+    .kpi { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.6rem; align-items: baseline; }
+    .kpi strong { font-size: 1.1rem; }
+    .hr { height: 1px; background: #ececec; margin: 1rem 0; }
+    code.inline { background: #f2f6fa; padding: 0.1rem 0.35rem; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .footer { text-align: center; color: var(--muted); margin-top: 2rem; font-size: 0.9rem; }
+  </style>
+
+  <!-- MathJax para escribir LaTeX en HTML -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+      svg: { fontCache: 'global' },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <!-- Plotly para visualizaciones -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <!-- math.js para utilidades numéricas y algebra lineal -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@13.0.1/lib/browser/math.js"></script>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <span class="badge">Prototipo didáctico</span>
+      <h1>Experiencia interactiva de Matemática y Estadística (HTML + JS + LaTeX)</h1>
+      <p>Objetivo: integrar notación LaTeX, simulaciones y ejercicios autocorregibles en una única página.</p>
+    </div>
+  </header>
+
+  <main>
+    <!-- Sección 0: Instrucciones rápidas -->
+    <section class="card">
+      <h2>Cómo usar este recurso en clase</h2>
+      <ol>
+        <li>Escribe expresiones en LaTeX entre <code class="inline">$...$</code> o <code class="inline">$$...$$</code>. Ej.: $\int_0^1 x^2\,dx$.</li>
+        <li>Usa los controles para generar simulaciones y problemas. El botón <em>Modo docente</em> activa soluciones y rúbricas.</li>
+        <li>Con <em>Exportar a LaTeX</em> puedes descargar un .tex con objetivos, ejercicios y soluciones.</li>
+      </ol>
+      <div class="row" style="margin-top: .5rem; align-items:center;">
+        <div>
+          <button id="toggleTeacher" class="ghost">Modo docente: <span id="teacherState">OFF</span></button>
+          <button id="exportTex" class="secondary">Exportar a LaTeX (.tex)</button>
+          <button id="resetAll" class="danger">Reiniciar</button>
+        </div>
+        <div class="kpi">
+          <span class="muted">Progreso (local):</span>
+          <strong id="progress">0/0</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sección 1: Objetivos y pre-requisitos -->
+    <section class="card">
+      <h2>Resultados de aprendizaje</h2>
+      <ul>
+        <li>Comparar probabilidades de una <strong>variable normal</strong> $X \sim \mathcal N(\mu,\sigma)$ vs. la <strong>media muestral</strong> $\bar X$.</li>
+        <li>Calcular <em>valores y vectores propios</em> de matrices $2\times2$ y analizar su significado geométrico básico.</li>
+        <li>Resolver ejercicios autocorregibles con <em>retroalimentación inmediata</em>.</li>
+      </ul>
+      <p class="muted">Sugerencia: inicia con la simulación estadística (intuición) y luego formaliza con notación.</p>
+    </section>
+
+    <!-- Sección 2: Estadística - Normal vs media muestral -->
+    <section class="card" id="estadistica">
+      <h2>Simulación: $X$ normal vs. $\bar X$ (distribución muestral)</h2>
+      <div class="controls">
+        <div>
+          <label>Media $\mu$</label>
+          <input id="mu" type="number" value="100" step="0.1" />
+        </div>
+        <div>
+          <label>Desv. estándar $\sigma$</label>
+          <input id="sigma" type="number" value="15" step="0.1" min="0.01" />
+        </div>
+        <div>
+          <label>Tamaño muestral $n$</label>
+          <input id="n" type="number" value="25" step="1" min="1" />
+        </div>
+        <div>
+          <label>N° de réplicas</label>
+          <input id="rep" type="number" value="2000" step="100" min="100" />
+        </div>
+        <div>
+          <button id="btnSimular">Simular</button>
+        </div>
+      </div>
+      <div class="hr"></div>
+      <div id="plotNormal" style="height: 360px"></div>
+
+      <details style="margin-top: .75rem">
+        <summary>Actividad guiada</summary>
+        <div style="margin-top: .5rem">
+          <p><strong>Pregunta A.</strong> Para $X \sim \mathcal N(\mu,\sigma)$ con tus parámetros, calcula $P(X > a)$ para $a=$ <input id="qa_a" type="number" value="130" step="0.1" style="width:120px">. Respuesta decimal (4 cifras): <input id="qa_ans" type="number" step="0.0001" style="width:140px"> <button id="qa_check">Verificar</button></p>
+          <div id="qa_feedback" class="muted"></div>
+
+          <p><strong>Pregunta B.</strong> Para la <em>media muestral</em> $\bar X$ con $n$ dado, calcula $P(\bar X > a)$ para el mismo $a$. Respuesta decimal (4 cifras): <input id="qb_ans" type="number" step="0.0001" style="width:140px"> <button id="qb_check">Verificar</button></p>
+          <div id="qb_feedback" class="muted"></div>
+
+          <details id="stat_hints" style="margin-top:.5rem"><summary>Pistas y solución</summary>
+            <div id="stat_solution" class="muted"></div>
+          </details>
+        </div>
+      </details>
+    </section>
+
+    <!-- Sección 3: Álgebra de Matrices - Valores y vectores propios -->
+    <section class="card" id="algebra">
+      <h2>Álgebra de matrices: valores y vectores propios (2×2)</h2>
+      <div class="controls">
+        <div><label>a</label><input id="a" type="number" step="0.1" value="2"></div>
+        <div><label>b</label><input id="b" type="number" step="0.1" value="1"></div>
+        <div><label>c</label><input id="c" type="number" step="0.1" value="-1"></div>
+        <div><label>d</label><input id="d" type="number" step="0.1" value="3"></div>
+        <button id="btnEigen">Calcular</button>
+      </div>
+      <div class="hr"></div>
+      <div id="eigenLatex" class="muted"></div>
+      <div id="plotEigen" style="height: 360px; margin-top: .5rem"></div>
+
+      <details style="margin-top:.5rem"><summary>Ejercicio autocorregible</summary>
+        <p>Con tu matriz $A$, determina el mayor valor propio real $\lambda_{\max}$ con 3 cifras decimales. Tu respuesta: <input id="qe_ans" type="number" step="0.001" style="width:140px"> <button id="qe_check">Verificar</button></p>
+        <div id="qe_feedback" class="muted"></div>
+      </details>
+    </section>
+
+    <!-- Sección 4: Banco de ejercicios (generación parametrizada) -->
+    <section class="card" id="banco">
+      <h2>Banco de ejercicios (generación parametrizada)</h2>
+      <p class="muted">Genera variantes de ejercicios con parámetros aleatorios controlados para practicar o evaluar.</p>
+      <div class="controls">
+        <div>
+          <label>Semilla</label>
+          <input id="seed" type="number" value="1234">
+        </div>
+        <div>
+          <label>Cantidad</label>
+          <input id="qty" type="number" min="1" max="10" value="3">
+        </div>
+        <button id="btnGen">Generar ejercicios</button>
+      </div>
+      <div class="grid cols-2" id="ejercicios"></div>
+    </section>
+
+    <div class="footer">Hecho con HTML + JavaScript + MathJax + Plotly + math.js · Almacena tu progreso en el navegador (localStorage)</div>
+  </main>
+
+  <script>
+    // ========================= Utilidades generales =========================
+    const $ = (q) => document.querySelector(q);
+    const $$ = (q) => Array.from(document.querySelectorAll(q));
+
+    const state = {
+      teacher: JSON.parse(localStorage.getItem('teacherMode') || 'false'),
+      answered: 0,
+      total: 0,
+      lastEigen: null, // {lambdaMax: number}
+    };
+
+    function updateTeacherBadge(){
+      $('#teacherState').textContent = state.teacher ? 'ON' : 'OFF';
+      document.body.classList.toggle('teacher-on', state.teacher);
+      // mostrar/ocultar soluciones
+      if(state.teacher){ $$('details').forEach(d => d.open = true); } else { /* no cerramos por defecto */ }
+    }
+
+    function updateProgress(){
+      $('#progress').textContent = `${state.answered}/${state.total}`;
+    }
+
+    function approxEqual(a,b,tol=1e-3){ return Math.abs(a-b) <= tol; }
+
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+    function fmt(x, k=4){ return Number(x).toFixed(k); }
+
+    // Error function approximation (Abramowitz & Stegun 7.1.26)
+    function erf(x){
+      const sign = Math.sign(x); x = Math.abs(x);
+      const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+      const t = 1/(1+p*x);
+      const y = 1 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*Math.exp(-x*x);
+      return sign*y;
+    }
+
+    function normalCDF(x, mu=0, sigma=1){ return 0.5*(1+erf((x-mu)/(sigma*Math.SQRT2))); }
+
+    function boxMuller(){
+      // Devuelve N(0,1)
+      let u=0, v=0; while(u===0) u=Math.random(); while(v===0) v=Math.random();
+      return Math.sqrt(-2.0*Math.log(u)) * Math.cos(2.0*Math.PI*v);
+    }
+
+    function sampleNormal(mu, sigma){ return mu + sigma*boxMuller(); }
+
+    async function typeset(){ if(window.MathJax) await MathJax.typesetPromise(); }
+
+    // ========================= Módulo Estadística =========================
+    function simulateNormal(){
+      const mu = parseFloat($('#mu').value);
+      const sigma = Math.max(0.0001, parseFloat($('#sigma').value));
+      const n = Math.max(1, parseInt($('#n').value));
+      const rep = Math.max(100, parseInt($('#rep').value));
+
+      // generar: X ~ N(mu, sigma), y medias de tamaño n
+      const X = new Array(rep).fill(0).map(() => sampleNormal(mu, sigma));
+      const means = new Array(rep).fill(0).map(() => {
+        let s=0; for(let i=0;i<n;i++) s += sampleNormal(mu, sigma); return s/n;
+      });
+
+      const layout = { title: 'Distribución de X vs distribución de la media muestral', barmode: 'overlay', xaxis: {title: 'Valor'}, yaxis: {title: 'Frecuencia'}, legend: {orientation: 'h'} };
+
+      const traceX = { x: X, type: 'histogram', name: 'X', opacity: 0.5, nbinsx: 40 };
+      const traceMean = { x: means, type: 'histogram', name: 'Media muestral', opacity: 0.5, nbinsx: 40 };
+
+      // Curvas teóricas
+      const xmin = Math.min(...X, ...means), xmax = Math.max(...X, ...means);
+      const xs = Array.from({length: 200}, (_,i) => xmin + (i/(200-1))*(xmax-xmin));
+      const densityX = xs.map(x => (1/(sigma*Math.sqrt(2*Math.PI)))*Math.exp(-0.5*((x-mu)/sigma)**2));
+      const sigmaMean = sigma/Math.sqrt(n);
+      const densityMean = xs.map(x => (1/(sigmaMean*Math.sqrt(2*Math.PI)))*Math.exp(-0.5*((x-mu)/sigmaMean)**2));
+
+      const curveX = { x: xs, y: densityX, name: 'Densidad teórica X', mode: 'lines' };
+      const curveMean = { x: xs, y: densityMean, name: 'Densidad teórica $\\bar X$', mode: 'lines' };
+
+      Plotly.newPlot('plotNormal', [traceX, traceMean, curveX, curveMean], layout, {responsive:true});
+
+      // preparar soluciones guiadas
+      const a = parseFloat($('#qa_a').value);
+      const pX = 1 - normalCDF(a, mu, sigma);
+      const pMean = 1 - normalCDF(a, mu, sigmaMean);
+      const solHtml = `
+        <p><strong>Marco teórico.</strong> Si $X\\sim \\mathcal N(\\mu,\\sigma)$ y $\\bar X$ es la media de una muestra IID de tamaño $n$, entonces $\\bar X \\sim \\mathcal N(\\mu, \\sigma/\\sqrt{n})$.</p>
+        <p><strong>Para X:</strong> $P(X>a) = 1 - \Phi\\!\left(\\tfrac{a-\\mu}{\\sigma}\\right)$. Con $a=${fmt(a,2)}, $\\mu=${fmt(mu,2)}, $\\sigma=${fmt(sigma,2)}$ obtenemos $P(X>a)= ${fmt(pX,4)}$.</p>
+        <p><strong>Para $\\bar X$:</strong> $P(\\bar X>a) = 1 - \Phi\\!\left(\\tfrac{a-\\mu}{\\sigma/\\sqrt{n}}\\right)$. Con $n=${n} y $\\sigma_{\\bar X}=${fmt(sigmaMean,3)}$ obtenemos $P(\\bar X>a)= ${fmt(pMean,4)}$.</p>
+        <p><em>Observa</em>: a igualdad de $a$, $P(\\bar X>a)$ suele ser menor que $P(X>a)$ porque $\\sigma_{\\bar X}<\\sigma$.</p>
+      `;
+      $('#stat_solution').innerHTML = solHtml;
+      typeset();
+    }
+
+    function checkQA(){
+      const mu = parseFloat($('#mu').value), sigma = Math.max(0.0001, parseFloat($('#sigma').value));
+      const a = parseFloat($('#qa_a').value);
+      const pX = 1 - normalCDF(a, mu, sigma);
+      const user = parseFloat($('#qa_ans').value);
+      if(Number.isFinite(user)){
+        const ok = approxEqual(user, pX, 5e-3);
+        $('#qa_feedback').textContent = ok ? '✔ Correcto' : `✖ Revise: la respuesta esperada es ≈ ${fmt(pX,4)}`;
+        if(ok) state.answered++;
+      } else {
+        $('#qa_feedback').textContent = 'Ingrese un número válido.';
+      }
+      updateProgress();
+    }
+
+    function checkQB(){
+      const mu = parseFloat($('#mu').value), sigma = Math.max(0.0001, parseFloat($('#sigma').value));
+      const n = Math.max(1, parseInt($('#n').value));
+      const a = parseFloat($('#qa_a').value);
+      const pMean = 1 - normalCDF(a, mu, sigma/Math.sqrt(n));
+      const user = parseFloat($('#qb_ans').value);
+      if(Number.isFinite(user)){
+        const ok = approxEqual(user, pMean, 5e-3);
+        $('#qb_feedback').textContent = ok ? '✔ Correcto' : `✖ Revise: la respuesta esperada es ≈ ${fmt(pMean,4)}`;
+        if(ok) state.answered++;
+      } else {
+        $('#qb_feedback').textContent = 'Ingrese un número válido.';
+      }
+      updateProgress();
+    }
+
+    // ========================= Módulo Álgebra =========================
+    function computeEigen(){
+      const a = parseFloat($('#a').value), b = parseFloat($('#b').value);
+      const c = parseFloat($('#c').value), d = parseFloat($('#d').value);
+      const tr = a + d, det = a*d - b*c;
+      const disc = tr*tr - 4*det;
+
+      let html = `<p>Para $A = \\begin{bmatrix} ${a} & ${b} \\ \\ ${c} & ${d} \\end{bmatrix}$, el polinomio característico es $p(\\lambda)=\\lambda^2 - (${fmt(tr,3)})\\,\\lambda + (${fmt(det,3)})$.</p>`;
+
+      if(disc < 0){
+        html += `<p>Discriminante $\\Delta=${fmt(disc,3)}<0$. Los valores propios son <em>complejos</em>. Este demo muestra solo el caso real.</p>`;
+        $('#eigenLatex').innerHTML = html; typeset();
+        Plotly.newPlot('plotEigen', [], {title:'Valores propios no reales', xaxis:{range:[-1,1]}, yaxis:{range:[-1,1]}}, {responsive:true});
+        state.lastEigen = null; return;
+      }
+
+      const sqrtDisc = Math.sqrt(disc);
+      const l1 = 0.5*(tr + sqrtDisc);
+      const l2 = 0.5*(tr - sqrtDisc);
+
+      function eigenvector(lambda){
+        // Resuelve (A - lambda I)v = 0
+        const A11 = a - lambda, A12 = b, A21 = c, A22 = d - lambda;
+        if(Math.abs(b) > 1e-12){
+          return [1, (lambda - a)/b];
+        } else if(Math.abs(c) > 1e-12){
+          return [(lambda - d)/c, 1];
+        } else {
+          // Matriz diagonal o múltiplos
+          return [1, 0];
+        }
+      }
+      const v1 = eigenvector(l1); const v2 = eigenvector(l2);
+
+      html += `<p>Discriminante $\\Delta=${fmt(disc,3)}$. Valores propios reales: $\\lambda_1=${fmt(l1,3)}$, $\\lambda_2=${fmt(l2,3)}$.</p>`;
+      html += `<p>Vectores propios asociados (no normalizados): $v_1=\\begin{bmatrix}${fmt(v1[0],3)}\\\\${fmt(v1[1],3)}\\end{bmatrix}$, $v_2=\\begin{bmatrix}${fmt(v2[0],3)}\\\\${fmt(v2[1],3)}\\end{bmatrix}$.</p>`;
+      $('#eigenLatex').innerHTML = html; typeset();
+
+      // Pequeña visualización de los eigenvectores
+      const scale = 1/Math.max(1, Math.max(Math.hypot(...v1), Math.hypot(...v2)));
+      const k = 1.1 * scale; // normaliza para que queden visibles
+
+      const arrows = [
+        {x: [0, k*v1[0]], y:[0, k*v1[1]], mode:'lines+markers', name:`v1 (λ=${fmt(l1,2)})`},
+        {x: [0, k*v2[0]], y:[0, k*v2[1]], mode:'lines+markers', name:`v2 (λ=${fmt(l2,2)})`}
+      ];
+      const layout = {title:'Direcciones propias (no a escala)', xaxis:{zeroline:true, range:[-1.2,1.2]}, yaxis:{zeroline:true, range:[-1.2,1.2]}, showlegend:true};
+      Plotly.newPlot('plotEigen', arrows, layout, {responsive:true});
+
+      state.lastEigen = {lambdaMax: Math.max(l1,l2)};
+    }
+
+    function checkQE(){
+      if(!state.lastEigen){ $('#qe_feedback').textContent = 'Primero calcule los valores propios.'; return; }
+      const user = parseFloat($('#qe_ans').value);
+      const truth = state.lastEigen.lambdaMax;
+      if(Number.isFinite(user)){
+        const ok = approxEqual(user, truth, 5e-3);
+        $('#qe_feedback').textContent = ok ? '✔ Correcto' : `✖ Revise: el mayor valor propio es ≈ ${fmt(truth,3)}`;
+        if(ok) state.answered++;
+      } else {
+        $('#qe_feedback').textContent = 'Ingrese un número válido.';
+      }
+      updateProgress();
+    }
+
+    // ========================= Banco de ejercicios =========================
+    function seededRandom(seed){
+      // LCG sencillo
+      let s = seed % 2147483647; if (s <= 0) s += 2147483646;
+      return () => (s = s * 16807 % 2147483647) / 2147483647;
+    }
+
+    function generateExercises(){
+      const seed = parseInt($('#seed').value);
+      const qty = clamp(parseInt($('#qty').value), 1, 10);
+      const rand = seededRandom(seed);
+      const cont = $('#ejercicios'); cont.innerHTML = '';
+      state.total = 0; state.answered = 0; updateProgress();
+
+      for(let i=1;i<=qty;i++){
+        // Estadística: normal vs media
+        const mu = 80 + Math.round(40*rand());
+        const sigma = 5 + Math.round(20*rand());
+        const n = 5 + Math.round(45*rand());
+        const a = mu + Math.round(1.2*sigma);
+
+        // Álgebra: matriz 2x2 moderada
+        const A = [
+          [Math.round( (rand()*6-3)*10 )/10, Math.round( (rand()*4-2)*10 )/10],
+          [Math.round( (rand()*4-2)*10 )/10, Math.round( (rand()*6-3)*10 )/10],
+        ];
+        const tr = A[0][0] + A[1][1]; const det = A[0][0]*A[1][1] - A[0][1]*A[1][0];
+        const disc = tr*tr - 4*det; let lmax = null;
+        if(disc >= 0){ const l1 = 0.5*(tr + Math.sqrt(disc)); const l2 = 0.5*(tr - Math.sqrt(disc)); lmax = Math.max(l1,l2); }
+
+        const el = document.createElement('div'); el.className = 'card';
+        el.innerHTML = `
+          <h3>Ejercicio ${i}</h3>
+          <p><strong>(Estadística)</strong> Sea $X \\sim \\mathcal N(${mu}, ${sigma})$ y sea $\\bar X$ la media de una muestra IID de tamaño $n=${n}$. Calcula $P(X>${a})$ y $P(\\bar X>${a})$.</p>
+          <div class="row">
+            <div>
+              <label>Ingresa $P(X>${a})$</label>
+              <input type="number" step="0.0001" id="ex${i}_px">
+              <button class="ghost" data-act="checkPX" data-i="${i}" data-mu="${mu}" data-sigma="${sigma}" data-a="${a}">Verificar</button>
+              <div id="ex${i}_px_fb" class="muted"></div>
+            </div>
+            <div>
+              <label>Ingresa $P(\\bar X>${a})$</label>
+              <input type="number" step="0.0001" id="ex${i}_pmean">
+              <button class="ghost" data-act="checkPMean" data-i="${i}" data-mu="${mu}" data-sigma="${sigma}" data-n="${n}" data-a="${a}">Verificar</button>
+              <div id="ex${i}_pmean_fb" class="muted"></div>
+            </div>
+          </div>
+          <details ${state.teacher? 'open':''}><summary>Solución (estadística)</summary>
+            <div class="muted" id="ex${i}_stat_sol"></div>
+          </details>
+          <div class="hr"></div>
+          <p><strong>(Álgebra)</strong> Para $A=\\begin{bmatrix}${A[0][0]} & ${A[0][1]} \\\\ ${A[1][0]} & ${A[1][1]}\\end{bmatrix}$, determina el mayor valor propio real $\\lambda_{\\max}$ (si existe).</p>
+          <div class="row">
+            <div>
+              <label>Ingresa $\\lambda_{\\max}$</label>
+              <input type="number" step="0.001" id="ex${i}_lmax">
+              <button class="ghost" data-act="checkLmax" data-i="${i}" data-lmax="${lmax==null? 'null': lmax}">Verificar</button>
+              <div id="ex${i}_lmax_fb" class="muted"></div>
+            </div>
+          </div>
+          <details ${state.teacher? 'open':''}><summary>Solución (álgebra)</summary>
+            <div class="muted">Polinomio característico $p(\\lambda)=\\lambda^2 - (${fmt(tr,3)})\\,\\lambda + (${fmt(det,3)})$. ${disc<0? 'No hay valores propios reales.' : 'Mayor valor propio: $'+fmt(lmax,3)+'$.'}</div>
+          </details>
+        `;
+        cont.appendChild(el);
+        state.total += 3;
+
+        // Rellenar soluciones estadística
+        const sigmaMean = sigma/Math.sqrt(n);
+        const pX = 1 - normalCDF(a, mu, sigma);
+        const pMean = 1 - normalCDF(a, mu, sigmaMean);
+        $(`#ex${i}_stat_sol`).innerHTML = `
+          $P(X>${a})=1-\\Phi\\!\left(\\tfrac{${a}-${mu}}{${sigma}}\\right)=${fmt(pX,4)}$<br/>
+          $P(\\bar X>${a})=1-\\Phi\\!\left(\\tfrac{${a}-${mu}}{${fmt(sigmaMean,3)}}\\right)=${fmt(pMean,4)}$`;
+      }
+      typeset();
+    }
+
+    document.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button'); if(!btn) return;
+      const act = btn.dataset.act; if(!act) return;
+      if(act === 'checkPX'){
+        const i = btn.dataset.i, mu = parseFloat(btn.dataset.mu), sigma = parseFloat(btn.dataset.sigma), a = parseFloat(btn.dataset.a);
+        const user = parseFloat($(`#ex${i}_px`).value);
+        const truth = 1 - normalCDF(a, mu, sigma);
+        $(`#ex${i}_px_fb`).textContent = Number.isFinite(user) && approxEqual(user, truth, 5e-3) ? '✔ Correcto' : `✖ Esperado ≈ ${fmt(truth,4)}`;
+        if(Number.isFinite(user) && approxEqual(user, truth, 5e-3)) { state.answered++; updateProgress(); }
+      }
+      if(act === 'checkPMean'){
+        const i = btn.dataset.i, mu = parseFloat(btn.dataset.mu), sigma = parseFloat(btn.dataset.sigma), n = parseInt(btn.dataset.n), a = parseFloat(btn.dataset.a);
+        const user = parseFloat($(`#ex${i}_pmean`).value);
+        const truth = 1 - normalCDF(a, mu, sigma/Math.sqrt(n));
+        $(`#ex${i}_pmean_fb`).textContent = Number.isFinite(user) && approxEqual(user, truth, 5e-3) ? '✔ Correcto' : `✖ Esperado ≈ ${fmt(truth,4)}`;
+        if(Number.isFinite(user) && approxEqual(user, truth, 5e-3)) { state.answered++; updateProgress(); }
+      }
+      if(act === 'checkLmax'){
+        const i = btn.dataset.i;
+        const lmax = btn.dataset.lmax === 'null' ? null : parseFloat(btn.dataset.lmax);
+        const user = parseFloat($(`#ex${i}_lmax`).value);
+        if(lmax === null){
+          $(`#ex${i}_lmax_fb`).textContent = 'Esta matriz no tiene valores propios reales.';
+          return;
+        }
+        const ok = Number.isFinite(user) && approxEqual(user, lmax, 5e-3);
+        $(`#ex${i}_lmax_fb`).textContent = ok ? '✔ Correcto' : `✖ Esperado ≈ ${fmt(lmax,3)}`;
+        if(ok) { state.answered++; updateProgress(); }
+      }
+    });
+
+    // ========================= Exportar LaTeX =========================
+    function exportToLaTeX(){
+      const mu = $('#mu').value, sigma = $('#sigma').value, n = $('#n').value, a = $('#qa_a').value;
+      const eigen = [$('#a').value, $('#b').value, $('#c').value, $('#d').value];
+      const tex = `\\documentclass[11pt]{article}
+\\usepackage[margin=2.5cm]{geometry}
+\\usepackage{amsmath, amssymb, amsthm}
+\\usepackage{booktabs}
+\\usepackage{hyperref}
+\\title{Experiencia interactiv\\'a: Normal vs Media Muestral y Valores Propios}
+\\author{Docencia UTEM}
+\\date{\\today}
+\\begin{document}
+\\maketitle
+\\section*{Resultados de aprendizaje}
+\\begin{itemize}
+  \\item Comparar probabilidades entre $X \\sim \\mathcal N(\\mu,\\sigma)$ y $\\bar X$.
+  \\item Calcular valores y vectores propios de matrices $2\\times2$.
+\\end{itemize}
+\\section*{Actividad 1: Estad\\'istica}
+Par\\'ametros sugeridos: $\\mu=${mu}, $\\sigma=${sigma}, $n=${n}, $a=${a}$.\\\\
+(1) Calcule $P(X>a)$.\\\\
+(2) Calcule $P(\\bar X>a)$.\\\\
+\\paragraph{Soluci\\'on.} $P(X>a)=1-\\Phi(\\tfrac{a-\\mu}{\\sigma})$, $P(\\bar X>a)=1-\\Phi(\\tfrac{a-\\mu}{\\sigma/\\sqrt{n}})$.
+\\section*{Actividad 2: \\'Algebra lineal}
+Considere $A=\\begin{bmatrix}${eigen[0]} & ${eigen[1]} \\ ${eigen[2]} & ${eigen[3]}\\end{bmatrix}$. Determine los valores propios y un vector propio asociado a cada uno.
+\\paragraph{Pista.} Use $p(\\lambda)=\\det(A-\\lambda I)$.
+\\end{document}`;
+      const blob = new Blob([tex], {type: 'application/x-tex'});
+      const url = URL.createObjectURL(blob);
+      const aTag = document.createElement('a');
+      aTag.href = url; aTag.download = 'experiencia_docente.tex';
+      document.body.appendChild(aTag); aTag.click(); aTag.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // ========================= Eventos =========================
+    $('#btnSimular').addEventListener('click', simulateNormal);
+    $('#qa_check').addEventListener('click', checkQA);
+    $('#qb_check').addEventListener('click', checkQB);
+    $('#btnEigen').addEventListener('click', computeEigen);
+    $('#qe_check').addEventListener('click', checkQE);
+    $('#btnGen').addEventListener('click', generateExercises);
+    $('#exportTex').addEventListener('click', exportToLaTeX);
+    $('#toggleTeacher').addEventListener('click', () => {
+      state.teacher = !state.teacher; localStorage.setItem('teacherMode', JSON.stringify(state.teacher)); updateTeacherBadge();
+    });
+    $('#resetAll').addEventListener('click', () => { localStorage.clear(); location.reload(); });
+
+    // Inicialización
+    (function init(){
+      updateTeacherBadge();
+      simulateNormal();
+      computeEigen();
+      generateExercises();
+      state.total = document.querySelectorAll('#banco .card').length * 3 + 2; // 2 preguntas guía + banco
+      updateProgress();
+    })();
+  </script>
+</body>
+</html>
